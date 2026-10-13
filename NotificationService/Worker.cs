@@ -19,17 +19,31 @@ public class Worker : BackgroundService
         _config = config;
     }
 
-    public override Task StartAsync(CancellationToken cancellationToken)
+    public override async Task StartAsync(CancellationToken cancellationToken)
     {
         var factory = new ConnectionFactory
         {
             HostName = _config["RabbitMq:Host"] ?? "localhost",
             Port = int.Parse(_config["RabbitMq:Port"] ?? "5672"),
             UserName = _config["RabbitMq:Username"] ?? "guest",
-            Password = _config["RabbitMq:Password"] ?? "guest"
+            Password = _config["RabbitMq:Password"] ?? "guest",
+            AutomaticRecoveryEnabled = true,
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
         };
 
-        _connection = factory.CreateConnection("NotificationService");
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                _connection = factory.CreateConnection("NotificationService");
+                break;
+            }
+            catch (RabbitMQ.Client.Exceptions.BrokerUnreachableException) when (attempt < 10)
+            {
+                _logger.LogWarning("RabbitMQ no disponible, reintentando ({Attempt}/10)...", attempt);
+                await Task.Delay(3000, cancellationToken);
+            }
+        }
         _channel = _connection.CreateModel();
 
         // 1. Declarar el mismo Exchange que usa la API
@@ -51,7 +65,7 @@ public class Worker : BackgroundService
 
         _logger.LogInformation("Cola 'notifications' creada y conectada al exchange 'outbox.events'");
 
-        return base.StartAsync(cancellationToken);
+        await base.StartAsync(cancellationToken);
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
