@@ -46,11 +46,22 @@ services:
       - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=OutboxPatternDb;User Id=sa;Password=Outbox@2024!;TrustServerCertificate=true;Min Pool Size=2;Max Pool Size=20;Connect Timeout=30;
       - RabbitMq__Host=rabbitmq
       - RabbitMq__Port=5672
-      - Email__SmtpHost=mailpit
-      - Email__SmtpPort=1025
     depends_on:
       sqlserver:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notifications:
+    build:
+      context: .
+      dockerfile: NotificationService/Dockerfile
+    environment:
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Port=5672
+      - Email__SmtpHost=mailpit
+      - Email__SmtpPort=1025
+    depends_on:
       rabbitmq:
         condition: service_healthy
       mailpit:

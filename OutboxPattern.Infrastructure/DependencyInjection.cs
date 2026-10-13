@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using OutboxPattern.Application.Interfaces;
 using OutboxPattern.Infrastructure.Configuration;
@@ -28,7 +27,6 @@ public static class DependencyInjection
 
         // Opciones de configuración
         services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMq"));
-        services.Configure<EmailOptions>(configuration.GetSection("Email"));
 
         // IConnection como Singleton: crear una conexión TCP a RabbitMQ es caro.
         // Se reutiliza durante toda la vida de la app; los channels (IModel) son baratos y se crean por operación.
@@ -40,9 +38,23 @@ public static class DependencyInjection
                 HostName = opts.Host,
                 Port = opts.Port,
                 UserName = opts.Username,
-                Password = opts.Password
+                Password = opts.Password,
+                AutomaticRecoveryEnabled = true,
+                NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
             };
-            return factory.CreateConnection("OutboxPattern.Api");
+
+            // Reintentar conexión si RabbitMQ aún no está listo
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    return factory.CreateConnection("OutboxPattern.Api");
+                }
+                catch (RabbitMQ.Client.Exceptions.BrokerUnreachableException) when (attempt < 10)
+                {
+                    Thread.Sleep(3000);
+                }
+            }
         });
 
         services.AddScoped<IEventPublisher, EventPublisher>();
