@@ -1,0 +1,21 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.vs/
+
+## Secrets
+appsettings.*.local.json
+*.pfx
+*.key
+
+## SQLite leftovers
+*.db
+*.db-shm
+*.db-wal
+
+## IDE
+.idea/
+.vscode/

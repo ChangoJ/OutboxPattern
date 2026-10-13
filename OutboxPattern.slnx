@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="OutboxPattern.Api/OutboxPattern.Api.csproj" />
+  <Project Path="OutboxPattern.Application/OutboxPattern.Application.csproj" />
+  <Project Path="OutboxPattern.Domain/OutboxPattern.Domain.csproj" />
+  <Project Path="OutboxPattern.Infrastructure/OutboxPattern.Infrastructure.csproj" />
+</Solution>
